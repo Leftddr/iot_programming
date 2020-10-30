@@ -20,7 +20,7 @@ int main(int argc, char* argv[]){
     }
 
     server_addr.sin_family = PF_INET;
-    server_addr.sin_port = htons(54321);
+    server_addr.sin_port = htons(atoi(argv[1]));
     inet_aton("127.0.0.1", &server_addr.sin_addr);
     memset(&(server_addr.sin_zero), 0, 0);
 
