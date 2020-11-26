@@ -29,7 +29,9 @@ void *thread_send(void *arg)
             header.len = htons(0);
             header.type = 'q';
             //header만 보낸다.
-            send(server_s, (char*)&header, sizeof(HEADER), 0);
+            //send(server_s, (char*)&header, sizeof(HEADER), 0);
+            send(server_s, (char*)&header.len, 2, 0);
+            send(server_s, (char*)&header.type, 1, 0);
 
             shutdown(server_s, SHUT_WR);
             break;
@@ -41,7 +43,9 @@ void *thread_send(void *arg)
             strcpy(send_msg, buf);
 
             //header, msg 순서로 메세지를 보낸다.
-            send(server_s, (char*)&header, sizeof(HEADER), 0);
+            //send(server_s, (char*)&header, sizeof(HEADER), 0);
+            send(server_s, (char*)&header.len, 2, 0);
+            send(server_s, (char*)&header.type, 1, 0);
             send(server_s, send_msg, strlen(send_msg), 0);
             free(send_msg);
         }
@@ -57,7 +61,7 @@ int main(int argc, char* argv[]){
     int sockfd;
     struct sockaddr_in my_addr;
     unsigned int sin_size;
-    char buf[BUF_SIZE];
+    char *buf;
 
     if(argc < 3){
         fprintf(stderr, "Usage : %s <IP> <PORT> <NAME>\n", argv[0]);
@@ -88,7 +92,9 @@ int main(int argc, char* argv[]){
     strcpy(send_msg, argv[3]);
 
     //처음 connect할 때 메세지 순서는 header, msg 순서대로 보낸다.
-    send(sockfd, (char*)&header, sizeof(HEADER), 0);
+    //send(sockfd, (char*)&header, sizeof(HEADER), 0);
+    send(sockfd, (char*)&header.len, 2, 0);
+    send(sockfd, (char*)&header.type, 1, 0);
     send(sockfd, send_msg, strlen(send_msg), 0);
     /////////////////////////////////////////////////////////////////
 
@@ -99,7 +105,14 @@ int main(int argc, char* argv[]){
     while(1){
         //recv에서 block 되어 있다.
         //여기서는 그냥 echo server에서 받은 것을 그대로 띄워준다.
-        int size = recv(sockfd, buf, BUF_SIZE, 0);
+        int size = recv(sockfd, &(header.len), 2, 0);
+        size += recv(sockfd, &(header.type), 1, 0);
+
+        header.len = ntohs(header.len);
+
+        buf = (char*)malloc(sizeof(char) * header.len);
+        size += recv(sockfd, buf, header.len, 0);
+
         if(size == 0){
             printf("Disconnected\n ");
             break;

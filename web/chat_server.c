@@ -27,7 +27,9 @@ typedef struct header{
 }HEADER;
 
 int recv_header(int server_s, HEADER *header){
-    int size = recv(server_s, (char*)header, sizeof(HEADER), 0);
+    //int size = recv(server_s, (char*)header, sizeof(HEADER), 0);
+    int size = recv(server_s, &(header->len), 2, 0);
+    size += recv(server_s, &(header->type), 1, 0);
     header->len = ntohs(header->len);
     return size;
 }
@@ -88,6 +90,12 @@ void erase_client(int sockfd){
 void send_to_all(char *msg){
     for(int i = 0 ; i < MAX ; i++){
         if(clients_fd[i] == 0) continue;
+        HEADER header;
+        header.len = strlen(msg);
+        header.len = htons(header.len);
+        header.type = 'm';
+        send(clients_fd[i], (char*)&header.len, 2, 0);
+        send(clients_fd[i], (char*)&header.type, 1, 0);
         send(clients_fd[i], msg, strlen(msg), 0);
     }
 }
@@ -190,7 +198,7 @@ int main(int argc, char* argv[]){
         //여기서 변수에 저장한다.
         store_client(client_addr, clientfd);
 
-        arg = malloc(sizeof(int));
+        arg = (int *)malloc(sizeof(int));
         *(int *)arg = clientfd;
 
         pthread_create(&t_id, NULL, thread_main, arg);
